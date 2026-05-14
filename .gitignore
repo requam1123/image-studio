@@ -1,0 +1,19 @@
+node_modules
+.next
+.env.local
+*.tsbuildinfo
+next-env.d.ts
+
+# Secrets & config
+token
+data/
+public/uploads/
+
+# Personal / private
+.claude/
+**/.claude/
+CLAUDE.md
+deploy.sh
+
+# OS
+.DS_Store
