@@ -71,7 +71,7 @@ function isValidApiBaseUrl(url: string): boolean {
   }
 }
 
-/** 保存任务结果到 history（带 10 秒超时） */
+/** 保存任务结果到 history（带 60 秒超时，写盘 + 缩略图需要时间） */
 async function saveResultsToHistory(
   taskId: string,
   isEdit: boolean,
@@ -83,7 +83,7 @@ async function saveResultsToHistory(
   const b64s = successResults.map((r) => r!.b64 as string);
   const usage = successResults[0]?.usage as Record<string, number> | undefined;
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 10000);
+  const timeout = setTimeout(() => controller.abort(), 60000);
   try {
     await fetch(HISTORY_API, {
       method: "POST",
