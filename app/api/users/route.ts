@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
       hasApiKey: !!config.apiKey,
       apiBaseUrl: config.baseUrl,
       model: config.model,
-      tokens,
+      tokenCount: tokens.length,
     });
   } catch (e) {
     console.error("GET /api/users:", e);

@@ -29,6 +29,8 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // 公开路径直接放行（不需要认证）
+  // 注意：matcher 已排除所有公开路径（/login, /api/auth/, /_next/*, /uploads, /favicon.ico），
+  // 此处 publicPaths 检查为冗余保护，matcher 是源头的排他规则。
   if (publicPaths.some((p) => pathname.startsWith(p))) {
     return NextResponse.next();
   }

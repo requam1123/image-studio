@@ -65,9 +65,7 @@ export default function HistoryPanel({ open, onClose }: Props) {
   }
 
   async function handleBatchDelete() {
-    for (const id of selectedIds) {
-      await deleteHistoryItem(id);
-    }
+    await Promise.all(Array.from(selectedIds).map(deleteHistoryItem));
     setSelectedIds(new Set());
     setSelectMode(false);
     await refresh();
@@ -208,7 +206,9 @@ function HistoryCard({
     if (expanded && !detail) {
       fetch("/api/history?id=" + encodeURIComponent(item.id)).then(r => r.json()).then(d => {
         if (d && d.item) setDetail({ refImages: d.item.refImages, promptFull: d.item.prompt });
-      }).catch(() => {});
+      }).catch((e) => {
+        console.error("Failed to load history detail:", e);
+      });
     }
   }, [expanded]);
 
@@ -304,13 +304,13 @@ function HistoryCard({
                 <span className="text-slate-600">{item.quality}</span>
               </div>
             )}
-            {(item as any).refCount > 0 && !detail && (
+            {item.refCount !== undefined && item.refCount > 0 && !detail && (
               <div className="flex gap-2 text-[11px]">
                 <span className="text-slate-400 shrink-0 w-12">参考图:</span>
                 <Loader2 size={10} className="animate-spin text-slate-400" />
               </div>
             )}
-            {(item as any).refCount > 0 && detail?.refImages && detail.refImages.length > 0 && (
+            {item.refCount !== undefined && item.refCount > 0 && detail?.refImages && detail.refImages.length > 0 && (
               <div className="flex gap-2 text-[11px]">
                 <span className="text-slate-400 shrink-0 w-12">参考图:</span>
                 <span className="text-indigo-500 text-[11px] cursor-pointer hover:underline"

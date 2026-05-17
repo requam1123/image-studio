@@ -6,7 +6,7 @@ export async function GET(request: NextRequest) {
   try {
     const username = await getUserFromJwt(request);
     if (!username) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    const rows = await queryAll("SELECT id, name, api_key as apiKey, api_base_url as apiBaseUrl, model, created_at FROM presets WHERE username = ? ORDER BY created_at DESC", [username]);
+    const rows = queryAll("SELECT id, name, api_key as apiKey, api_base_url as apiBaseUrl, model, created_at FROM presets WHERE username = ? ORDER BY created_at DESC", [username]);
     return NextResponse.json({ presets: rows });
   } catch (e) {
     console.error("GET /api/users/presets:", e);
@@ -38,7 +38,7 @@ export async function DELETE(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
     if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
-    const row = await queryOne("SELECT username FROM presets WHERE id = ?", [id]);
+    const row = queryOne("SELECT username FROM presets WHERE id = ?", [id]);
     if (!row) return NextResponse.json({ error: "Not found" }, { status: 404 });
     if (row.username !== username) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     await execute("DELETE FROM presets WHERE id = ?", [id]);

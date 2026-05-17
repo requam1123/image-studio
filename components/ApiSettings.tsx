@@ -21,7 +21,7 @@ import { useState, useEffect } from "react";
 import { Settings, X, Check, Loader2, Trash2, Plus, ArrowRight } from "lucide-react";
 
 /** 预设数据结构 */
-interface Preset { id: string; name: string; apiKey: string; apiBaseUrl: string | null; }
+interface Preset { id: string; name: string; apiKey: string; apiBaseUrl: string | null; model: string | null; }
 
 interface Props {
   open?: boolean;
@@ -72,7 +72,9 @@ export default function ApiSettings({ open: controlledOpen, onClose, onOpen }: P
       setApiKey(data.apiKey || "");
       setApiBaseUrl(data.apiBaseUrl || "");
       setModel(data.model || "");
-      if (data.tokens) setTokens(data.tokens);
+      if (data.tokenCount != null) {
+        setTokens(Array.from({ length: data.tokenCount }, (_, i) => `#${i + 1} ****sk-****`));
+      }
     });
   }, [open]);
 
@@ -92,7 +94,9 @@ export default function ApiSettings({ open: controlledOpen, onClose, onOpen }: P
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
       loadPresets();
-    } catch { /* ignore */ }
+    } catch (e) {
+      console.error("保存配置失败:", e);
+    }
     setSaving(false);
   }
 
@@ -107,7 +111,9 @@ export default function ApiSettings({ open: controlledOpen, onClose, onOpen }: P
       });
       setPresetName("");
       loadPresets();
-    } catch { /* ignore */ }
+    } catch (e) {
+      console.error("保存预设失败:", e);
+    }
   }
 
   /** 删除预设 */
@@ -115,18 +121,20 @@ export default function ApiSettings({ open: controlledOpen, onClose, onOpen }: P
     try {
       await fetch(`/api/users/presets?id=${encodeURIComponent(id)}`, { method: "DELETE" });
       loadPresets();
-    } catch { /* ignore */ }
+    } catch (e) {
+      console.error("删除预设失败:", e);
+    }
   }
 
   /** 加载预设到当前表单并自动保存 */
   function applyPreset(p: Preset) {
     setApiKey(p.apiKey || "");
     setApiBaseUrl(p.apiBaseUrl || "");
-    setModel((p as any).model || "");
+    setModel((p as Preset).model || "");
     fetch("/api/users", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ apiKey: p.apiKey || undefined, apiBaseUrl: p.apiBaseUrl || undefined, model: (p as any).model || undefined }),
+      body: JSON.stringify({ apiKey: p.apiKey || undefined, apiBaseUrl: p.apiBaseUrl || undefined, model: (p as Preset).model || undefined }),
     }).then(() => {
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
@@ -149,6 +157,7 @@ export default function ApiSettings({ open: controlledOpen, onClose, onOpen }: P
         <div
           className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/30 backdrop-blur-sm"
           onClick={doClose}
+          role="dialog" aria-modal="true" aria-label="API 配置"
         >
           <div
             className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 mt-10 mb-4 sm:my-auto overflow-y-auto max-h-[90vh]"
@@ -157,7 +166,7 @@ export default function ApiSettings({ open: controlledOpen, onClose, onOpen }: P
             {/* 弹窗头部：标题 + 关闭按钮（sticky 定位，滚动时保持在顶部） */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 sticky top-0 bg-white z-10">
               <h2 className="text-sm font-semibold text-slate-700">API 配置</h2>
-              <button onClick={doClose} className="text-slate-400 hover:text-slate-600">
+              <button onClick={doClose} className="text-slate-400 hover:text-slate-600" aria-label="关闭">
                 <X size={16} />
               </button>
             </div>
@@ -170,7 +179,7 @@ export default function ApiSettings({ open: controlledOpen, onClose, onOpen }: P
                   <label className="block text-xs font-medium text-slate-600 mb-1.5">轮转密钥（{tokens.length} 个）</label>
                   <div className="space-y-1 bg-slate-50 rounded-xl px-3 py-2.5">
                     {tokens.map((t: string, i: number) => (
-                      <div key={i} className="text-[11px] text-slate-600 font-mono truncate">#{i + 1}: {t}</div>
+                      <div key={i} className="text-[11px] text-slate-600 font-mono truncate">{t}</div>
                     ))}
                   </div>
                 </div>

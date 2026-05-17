@@ -23,9 +23,10 @@
 import { SignJWT, jwtVerify } from "jose";
 import type { NextRequest } from "next/server";
 
-const secret = new TextEncoder().encode(
-  process.env.JWT_SECRET || "fallback-dev-secret-change-in-production"
-);
+if (!process.env.JWT_SECRET) {
+  throw new Error("JWT_SECRET environment variable is required");
+}
+const secret = new TextEncoder().encode(process.env.JWT_SECRET);
 
 /** 签发 JWT（30 天有效期） */
 export async function signToken(username: string): Promise<string> {
@@ -42,7 +43,8 @@ export async function verifyToken(
 ): Promise<{ username: string } | null> {
   try {
     const { payload } = await jwtVerify(token, secret);
-    return { username: payload.username as string };
+    if (typeof payload.username !== "string" || !payload.username) return null;
+    return { username: payload.username };
   } catch {
     return null;
   }

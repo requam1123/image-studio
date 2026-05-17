@@ -38,6 +38,7 @@ export interface HistoryItem {
     output: number;
   };
   originalB64?: string;     // 编辑前原图（仅 edit 类型，懒加载时返回）
+  refCount?: number;        // 参考图数量（仅用于 HistoryPanel 展开指示）
 }
 
 const API_BASE = "/api/history";
@@ -49,7 +50,8 @@ export async function getHistoryItem(id: string): Promise<HistoryItem | null> {
     if (!res.ok) return null;
     const data = await res.json();
     return data.item ?? null;
-  } catch {
+  } catch (e) {
+    console.warn("getHistoryItem failed:", e);
     return null;
   }
 }
@@ -61,7 +63,8 @@ export async function loadHistory(): Promise<HistoryItem[]> {
     if (!res.ok) return [];
     const data = await res.json();
     return data.items ?? [];
-  } catch {
+  } catch (e) {
+    console.warn("loadHistory failed:", e);
     return [];
   }
 }
@@ -74,8 +77,8 @@ export async function addHistory(item: HistoryItem) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(item),
     });
-  } catch {
-    // silently ignore
+  } catch (e) {
+    console.warn("addHistory failed:", e);
   }
 }
 
@@ -83,8 +86,8 @@ export async function addHistory(item: HistoryItem) {
 export async function clearHistory() {
   try {
     await fetch(API_BASE, { method: "DELETE" });
-  } catch {
-    // silently ignore
+  } catch (e) {
+    console.warn("clearHistory failed:", e);
   }
 }
 
@@ -94,7 +97,7 @@ export async function deleteHistoryItem(id: string) {
     await fetch(`${API_BASE}?id=${encodeURIComponent(id)}`, {
       method: "DELETE",
     });
-  } catch {
-    // silently ignore
+  } catch (e) {
+    console.warn("deleteHistoryItem failed:", e);
   }
 }

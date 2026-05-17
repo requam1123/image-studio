@@ -412,7 +412,7 @@ export default function ImageGenerator() {
                   <img src={dataUrlFromB64(b64)} alt={`参考图 ${i + 1}`}
                     className="w-20 h-20 object-cover rounded-xl border border-slate-200" />
                   <button type="button" onClick={() => removeRefImage(i)}
-                    className="absolute -top-1.5 -right-1.5 bg-white rounded-full p-0.5 shadow border border-slate-200 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                    className="absolute -top-1.5 -right-1.5 bg-white rounded-full p-0.5 shadow border border-slate-200 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity" aria-label={`移除参考图 ${i + 1}`}>
                     <X size={12} className="text-slate-500" />
                   </button>
                 </div>
@@ -421,6 +421,9 @@ export default function ImageGenerator() {
           )}
           <div onClick={() => inputRef.current?.click()} onDrop={handleDrop}
             onDragOver={handleDragOver} onDragLeave={handleDragLeave}
+            role="button" tabIndex={0}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") inputRef.current?.click(); }}
+            aria-label="点击或拖拽上传参考图片"
             className={`border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-all ${dragOver ? "border-indigo-400 bg-indigo-50" : "border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/30"}`}>
             <input ref={inputRef} type="file" accept="image/*" multiple className="hidden"
               onChange={(e) => { if (e.target.files && e.target.files.length > 0) addRefFiles(e.target.files); }} />

@@ -39,9 +39,9 @@ export default function RecentResults({ type, onUseAsRef }: { type: "generate" |
     });
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [load]);
   // 每 30 秒自动刷新
-  useEffect(() => { const id = setInterval(load, 30000); return () => clearInterval(id); }, []);
+  useEffect(() => { const id = setInterval(load, 30000); return () => clearInterval(id); }, [load]);
 
   async function handleCopy(src: string, id: string) {
     try {

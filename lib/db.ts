@@ -176,7 +176,7 @@ export function updateUserConfig(
 ): void {
   const existing = db
     .prepare("SELECT username FROM users WHERE username = ?")
-    .get(username) as any;
+    .get(username) as { username: string } | undefined;
   if (existing) {
     if (data.api_key !== undefined)
       db.prepare("UPDATE users SET api_key = ? WHERE username = ?").run(
@@ -213,23 +213,23 @@ export function updateUserConfig(
  */
 export function queryAll(
   sql: string,
-  params: any[] = []
-): Record<string, any>[] {
-  return db.prepare(sql).all(...params) as Record<string, any>[];
+  params: unknown[] = []
+): Record<string, unknown>[] {
+  return db.prepare(sql).all(...params) as Record<string, unknown>[];
 }
 
 /** 查询单条记录（找不到返回 null） */
 export function queryOne(
   sql: string,
-  params: any[] = []
-): Record<string, any> | null {
+  params: unknown[] = []
+): Record<string, unknown> | null {
   return (
-    (db.prepare(sql).get(...params) as Record<string, any>) || null
+    (db.prepare(sql).get(...params) as Record<string, unknown>) || null
   );
 }
 
 /** 执行 INSERT / UPDATE / DELETE */
-export function execute(sql: string, params: any[] = []): void {
+export function execute(sql: string, params: unknown[] = []): void {
   db.prepare(sql).run(...params);
 }
 
@@ -273,6 +273,7 @@ export function getTokens(): string[] {
  * 每次调用的计数器 +1，返回取模后的索引
  */
 export function getNextKeyIndex(): number {
+  if (_tokens.length === 0) return -1;
   db.prepare("UPDATE token_counter SET value = value + 1 WHERE id = 1").run();
   const row = db
     .prepare("SELECT value FROM token_counter WHERE id = 1")

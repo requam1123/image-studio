@@ -56,6 +56,64 @@ try {
   /* first load, table may not exist */
 }
 
+/** 验证 API Base URL 防止 SSRF */
+function isValidApiBaseUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return false;
+    const host = parsed.hostname;
+    if (host === "localhost" || host === "127.0.0.1" || host === "0.0.0.0") return false;
+    if (host.startsWith("10.") || host.startsWith("172.16.") || host.startsWith("192.168.")) return false;
+    if (host === "169.254.169.254") return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** 保存任务结果到 history（带 10 秒超时） */
+async function saveResultsToHistory(
+  taskId: string,
+  isEdit: boolean,
+  model: string,
+  task: Record<string, unknown>,
+  refImages: string[] | undefined,
+  successResults: Record<string, unknown>[]
+) {
+  const b64s = successResults.map((r) => r!.b64 as string);
+  const usage = successResults[0]?.usage as Record<string, number> | undefined;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10000);
+  try {
+    await fetch(HISTORY_API, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: taskId,
+        type: isEdit ? "edit" : "generate",
+        model,
+        prompt: task.prompt as string,
+        size: (task.size as string) || "auto",
+        quality: task.quality && task.quality !== "auto" ? task.quality as string : undefined,
+        refImages: isEdit ? undefined : refImages,
+        originalB64: isEdit ? refImages?.[0] : undefined,
+        b64: b64s[0],
+        imagesB64: b64s.length > 1 ? b64s : undefined,
+        timestamp: Date.now(),
+        status: "completed",
+        usage: usage
+          ? { total: usage.total || 0, input: usage.input || 0, output: usage.output || 0 }
+          : undefined,
+      }),
+      signal: controller.signal,
+    });
+  } catch (e) {
+    console.error(`保存任务 ${taskId} 到 history 失败:`, e);
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 // ── POST: 创建任务 ──
 
 /**
@@ -85,9 +143,12 @@ export async function POST(request: NextRequest) {
     }
 
     const type = body.type || "generate";
+    if (!["generate", "edit"].includes(type)) {
+      return NextResponse.json({ error: "无效的任务类型" }, { status: 400 });
+    }
     const count = Math.min(body.count || 1, 5);
 
-    const taskId = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const taskId = crypto.randomUUID();
 
     // ref_images 统一存 JSON 数组：
     // generate 有多张参考图时传 refImages 数组
@@ -160,7 +221,11 @@ async function processGenerateTask(
 
     const username = t.username as string;
     const userConfig = username ? getUserConfig(username) : null;
-    const apiBase = userConfig?.baseUrl || process.env.API_BASE_URL || "";
+    let apiBase = userConfig?.baseUrl || process.env.API_BASE_URL || "";
+    if (apiBase && !isValidApiBaseUrl(apiBase)) {
+      console.warn(`用户 ${username} 设置了无效的 apiBaseUrl: ${apiBase}，回退到默认`);
+      apiBase = "";
+    }
     const model = (userConfig?.model || t.model as string || "gpt-image-2") as string;
 
     const endpoint = isEdit ? `${apiBase}/v1/images/edits` : `${apiBase}/v1/images/generations`;
@@ -215,7 +280,8 @@ async function processGenerateTask(
 
         const bodyText = await res.text();
         if (!res.ok) {
-          results[i] = { error: bodyText.slice(0, 1000) };
+          console.error(`上游 API 错误 (${res.status}):`, bodyText.slice(0, 500));
+          results[i] = { error: "上游 API 请求失败" };
           return;
         }
 
@@ -234,7 +300,8 @@ async function processGenerateTask(
             : undefined,
         };
       } catch (err) {
-        results[i] = { error: String(err) };
+        console.error(`fetchOne ${i} 失败:`, err);
+        results[i] = { error: "网络请求失败" };
       }
     }
 
@@ -264,37 +331,7 @@ async function processGenerateTask(
 
     // 保存到 history
     if (successResults.length > 0) {
-      const b64s = successResults.map((r) => r!.b64 as string);
-      const usage = successResults[0]?.usage as Record<string, number> | undefined;
-      try {
-        await fetch(HISTORY_API, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            id: taskId,
-            type: isEdit ? "edit" : "generate",
-            model,
-            prompt: t.prompt as string,
-            size: (t.size as string) || "auto",
-            quality: t.quality && t.quality !== "auto" ? t.quality as string : undefined,
-            refImages: isEdit ? undefined : refImages,
-            originalB64: isEdit ? refImages?.[0] : undefined,
-            b64: b64s[0],
-            imagesB64: b64s.length > 1 ? b64s : undefined,
-            timestamp: Date.now(),
-            status: "completed",
-            usage: usage
-              ? {
-                  total: usage.total || 0,
-                  input: usage.input || 0,
-                  output: usage.output || 0,
-                }
-              : undefined,
-          }),
-        });
-      } catch (e) {
-        console.error(`保存任务 ${taskId} 到 history 失败:`, e);
-      }
+      await saveResultsToHistory(taskId, isEdit, model, t, refImages, successResults as Record<string, unknown>[]);
     }
   } catch (err) {
     console.error(`processGenerateTask ${taskId} 失败:`, err);

@@ -139,13 +139,16 @@ export async function GET(request: NextRequest) {
 
     // 单条详情
     if (id) {
-      const row = await queryOne("SELECT * FROM history WHERE id = ? LIMIT 1", [id]);
+      const row = queryOne(
+        "SELECT * FROM history WHERE id = ? AND (username = ? OR username = '') LIMIT 1",
+        [id, username]
+      );
       if (!row) return NextResponse.json({ error: "Not found" }, { status: 404 });
       return NextResponse.json({ item: itemFromRow(row, true) });
     }
 
     // 列表（元数据，不含 b64）
-    const rows = await queryAll(
+    const rows = queryAll(
       `SELECT id, type, model, prompt, size, quality, timestamp, duration, status,
               usage_total, usage_input, usage_output,
               file_path, images_file_path, json_array_length(ref_images) as refCount
@@ -247,7 +250,7 @@ export async function PATCH(request: NextRequest) {
   try {
     const username = (await getUserFromJwt(request)) || "";
     const item = await request.json();
-    const existing = await queryOne("SELECT username FROM history WHERE id = ?", [item.id]);
+    const existing = queryOne("SELECT username FROM history WHERE id = ?", [item.id]);
     if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
     // 非本人记录禁止修改
     if (existing.username && existing.username !== username) {

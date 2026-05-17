@@ -13,8 +13,8 @@
  * 尺寸选项（用于生成 Tab）
  *
  * 与 ImageEditor 的 EDIT_SIZES 不同：
- * - SIZES 不包含 "auto"（生成必须有明确尺寸）
- * - EDIT_SIZES 多了 "auto"（保留原图尺寸）
+ * - SIZES 包含 "auto"（让上游 API 自动选择尺寸）
+ * - EDIT_SIZES 也有 "auto"（保留原图尺寸）
  */
 export const SIZES = [
   { label: "1024×1024", value: "1024x1024" },

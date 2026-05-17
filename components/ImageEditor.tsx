@@ -99,6 +99,7 @@ export default function ImageEditor() {
   const inputRef = useRef<HTMLInputElement>(null);
   const resultRef = useRef<HTMLDivElement>(null);
   const currentTaskRef = useRef<string | null>(null);
+  const previewUrlRef = useRef<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => { setIsMobile(canSaveToAlbum()); }, []);
 
@@ -108,6 +109,11 @@ export default function ImageEditor() {
     saveLS("edit_size", size);
     saveLS("edit_count", String(count));
   }, [prompt, size, count]);
+
+  // 组件卸载时清理 object URL
+  useEffect(() => () => {
+    if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
+  }, []);
 
   // ── 页面加载时恢复未完成的编辑任务 ──
   useEffect(() => {
@@ -152,8 +158,11 @@ export default function ImageEditor() {
   /** 选择文件后：设预览、读 base64、清除上次任务 */
   async function handleFile(f: File) {
     if (!f.type.startsWith("image/")) return;
+    if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
+    const url = URL.createObjectURL(f);
+    previewUrlRef.current = url;
     setFile(f);
-    setPreview(URL.createObjectURL(f));
+    setPreview(url);
     setOriginalB64(await readFileAsBase64(f));
     setActiveTask(null);
   }
@@ -167,6 +176,8 @@ export default function ImageEditor() {
   function handleDragLeave() { setDragOver(false); }
 
   function clearFile() {
+    if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
+    previewUrlRef.current = null;
     setFile(null);
     setPreview(null);
     setActiveTask(null);
@@ -290,13 +301,16 @@ export default function ImageEditor() {
             <div className="relative rounded-xl overflow-hidden">
               <img src={preview} alt="预览" className="w-full max-h-64 object-contain bg-slate-100" />
               <button type="button" onClick={clearFile}
-                className="absolute top-2 right-2 bg-white/80 hover:bg-white rounded-full p-1.5 shadow transition-all">
+                className="absolute top-2 right-2 bg-white/80 hover:bg-white rounded-full p-1.5 shadow transition-all" aria-label="清除图片">
                 <X size={14} className="text-slate-600" />
               </button>
             </div>
           ) : (
             <div onClick={() => inputRef.current?.click()} onDrop={handleDrop}
               onDragOver={handleDragOver} onDragLeave={handleDragLeave}
+              role="button" tabIndex={0}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") inputRef.current?.click(); }}
+              aria-label="点击或拖拽上传图片"
               className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all ${
                 dragOver ? "border-indigo-400 bg-indigo-50" : "border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/30"}`}>
               <input ref={inputRef} type="file" accept="image/*" className="hidden"

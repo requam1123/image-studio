@@ -55,7 +55,9 @@ export default function ImagePreview({ src, alt, onClose, onDownload, onUseAsRef
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
-      onClick={onClose}           // 点击遮罩关闭
+      role="dialog" aria-modal="true" aria-label={alt || "图片预览"}
+      onClick={onClose}
+      onKeyDown={(e) => { if (e.key === "Escape") onClose(); }}
     >
       <div
         className="relative max-w-[90vw] max-h-[90vh] flex flex-col"
@@ -90,7 +92,7 @@ export default function ImagePreview({ src, alt, onClose, onDownload, onUseAsRef
           </button>
           <button
             onClick={onClose}
-            className="bg-white/90 hover:bg-white text-slate-700 rounded-lg p-1.5 shadow transition-all"
+            className="bg-white/90 hover:bg-white text-slate-700 rounded-lg p-1.5 shadow transition-all" aria-label="关闭"
           >
             <X size={14} />
           </button>
