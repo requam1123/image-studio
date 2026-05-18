@@ -147,7 +147,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ item: itemFromRow(row, true) });
     }
 
-    // 列表（元数据，不含 b64）
     const rows = queryAll(
       `SELECT id, type, model, prompt, size, quality, timestamp, duration, status,
               usage_total, usage_input, usage_output,
@@ -182,8 +181,8 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const username = (await getUserFromJwt(request)) || "";
     const item = await request.json();
+    const username = item.username || (await getUserFromJwt(request)) || "";
 
     let filePath: string | null = null;
     let thumbPath: string | null = null;

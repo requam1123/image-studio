@@ -74,6 +74,7 @@ function isValidApiBaseUrl(url: string): boolean {
 /** 保存任务结果到 history（带 60 秒超时，写盘 + 缩略图需要时间） */
 async function saveResultsToHistory(
   taskId: string,
+  username: string,
   isEdit: boolean,
   model: string,
   task: Record<string, unknown>,
@@ -90,6 +91,7 @@ async function saveResultsToHistory(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         id: taskId,
+        username,
         type: isEdit ? "edit" : "generate",
         model,
         prompt: task.prompt as string,
@@ -331,7 +333,7 @@ async function processGenerateTask(
 
     // 保存到 history
     if (successResults.length > 0) {
-      await saveResultsToHistory(taskId, isEdit, model, t, refImages, successResults as Record<string, unknown>[]);
+      await saveResultsToHistory(taskId, username, isEdit, model, t, refImages, successResults as Record<string, unknown>[]);
     }
   } catch (err) {
     console.error(`processGenerateTask ${taskId} 失败:`, err);
