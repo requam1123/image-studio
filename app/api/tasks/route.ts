@@ -264,26 +264,51 @@ async function processGenerateTask(
         if (t.size && t.size !== "auto") reqBody.size = t.size as string;
         if (t.quality && t.quality !== "auto")
           reqBody.quality = t.quality as string;
-        if (refImages && refImages.length > 0) {
-          // edit 只有单张图片，generate 可能有多个参考图
-          reqBody.image = isEdit ? refImages[0] : refImages;
-        }
 
-        const res = await fetch(endpoint, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${apiKey}`,
-          },
-          body: JSON.stringify(reqBody),
-          signal: controller.signal,
-        });
+        let res: Response;
+        if (isEdit && refImages && refImages.length > 0) {
+          // 编辑 API 需要 multipart/form-data（上传图片文件）
+          const form = new FormData();
+          form.append("model", model);
+          form.append("prompt", t.prompt as string);
+          form.append("response_format", "b64_json");
+          if (t.size && t.size !== "auto") form.append("size", t.size as string);
+
+          // 将 base64 图片转为 Blob
+          const raw = refImages[0].includes("base64,")
+            ? refImages[0].split("base64,")[1]
+            : refImages[0];
+          const buf = Buffer.from(raw, "base64");
+          const blob = new Blob([buf], { type: "image/png" });
+          form.append("image", blob, "image.png");
+
+          res = await fetch(endpoint, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${apiKey}` },
+            body: form,
+            signal: controller.signal,
+          });
+        } else {
+          if (refImages && refImages.length > 0) {
+            reqBody.image = refImages;
+          }
+
+          res = await fetch(endpoint, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${apiKey}`,
+            },
+            body: JSON.stringify(reqBody),
+            signal: controller.signal,
+          });
+        }
         clearTimeout(timeout);
 
         const bodyText = await res.text();
         if (!res.ok) {
-          console.error(`上游 API 错误 (${res.status}):`, bodyText.slice(0, 500));
-          results[i] = { error: "上游 API 请求失败" };
+          console.error(`上游 API 错误 (${res.status}):`, bodyText.slice(0, 1000));
+          results[i] = { error: bodyText.slice(0, 1000) };
           return;
         }
 
