@@ -127,7 +127,7 @@ export default function ImageGenerator() {
       saveLS(LS_KEYS.quality, quality);
       saveLS(LS_KEYS.count, String(count));
       saveLSRefs(refImages);
-    }, 300);
+    }, 100);
     return () => clearTimeout(saveTimerRef.current);
   }, [prompt, size, quality, count, refImages]);
 
@@ -135,6 +135,11 @@ export default function ImageGenerator() {
   useEffect(() => {
     const saved = loadLSText(LS_KEYS.prompt);
     if (saved && saved !== prompt) setPrompt(saved);
+    // 兜底：如果 localStorage 为空但 textarea 实际有内容，直接用 DOM 值
+    if (!saved && !prompt) {
+      const el = document.querySelector<HTMLTextAreaElement>(`textarea[placeholder*="描述你想要生成的"]`);
+      if (el && el.value) setPrompt(el.value);
+    }
   }, []);
 
   // ── 页面加载时恢复任务 ──
@@ -372,7 +377,7 @@ export default function ImageGenerator() {
   // ── 渲染 ──
   return (
     <div className="space-y-6">
-      <form onSubmit={handleSubmit} className="glass rounded-2xl p-6 space-y-4">
+      <form onSubmit={handleSubmit} autoComplete="off" className="glass rounded-2xl p-6 space-y-4">
         {/* Prompt */}
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1.5">描述词 (Prompt)</label>

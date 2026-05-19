@@ -105,11 +105,13 @@ export default function ImageEditor() {
 
   // 同步 localStorage 到 prompt（防止浏览器表单恢复导致 React 状态不同步）
   useEffect(() => {
-    const saved = (() => {
-      if (typeof window === "undefined") return "";
-      try { return localStorage.getItem("edit_prompt") || ""; } catch { return ""; }
-    })();
+    const saved = loadLSText("edit_prompt");
     if (saved && saved !== prompt) setPrompt(saved);
+    // 兜底：如果 localStorage 为空但 textarea 实际有内容，直接用 DOM 值
+    if (!saved && !prompt) {
+      const el = document.querySelector<HTMLTextAreaElement>(`textarea[placeholder*="描述你想要如何编辑"]`);
+      if (el && el.value) setPrompt(el.value);
+    }
   }, []);
 
   // ── localStorage 持久化 ──
@@ -302,7 +304,7 @@ export default function ImageEditor() {
   // ── 渲染 ──
   return (
     <div className="space-y-6">
-      <form onSubmit={handleSubmit} className="glass rounded-2xl p-6 space-y-4">
+      <form onSubmit={handleSubmit} autoComplete="off" className="glass rounded-2xl p-6 space-y-4">
         {/* Image upload */}
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1.5">上传图片</label>
