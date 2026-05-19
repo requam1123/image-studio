@@ -103,6 +103,15 @@ export default function ImageEditor() {
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => { setIsMobile(canSaveToAlbum()); }, []);
 
+  // 同步 localStorage 到 prompt（防止浏览器表单恢复导致 React 状态不同步）
+  useEffect(() => {
+    const saved = (() => {
+      if (typeof window === "undefined") return "";
+      try { return localStorage.getItem("edit_prompt") || ""; } catch { return ""; }
+    })();
+    if (saved && saved !== prompt) setPrompt(saved);
+  }, []);
+
   // ── localStorage 持久化 ──
   useEffect(() => {
     saveLS("edit_prompt", prompt);
@@ -326,7 +335,7 @@ export default function ImageEditor() {
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1.5">编辑描述 (Prompt)</label>
           <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)}
-            placeholder="描述你想要如何编辑图片，例如：戴上眼镜" rows={2}
+            placeholder="描述你想要如何编辑图片，例如：戴上眼镜" rows={2} autoComplete="off"
             className="w-full rounded-xl border border-slate-200 bg-white/60 px-4 py-3 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-transparent resize-none transition-all" />
         </div>
 

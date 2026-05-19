@@ -131,6 +131,12 @@ export default function ImageGenerator() {
     return () => clearTimeout(saveTimerRef.current);
   }, [prompt, size, quality, count, refImages]);
 
+  // ── 同步 localStorage 到 prompt 状态（处理浏览器表单恢复导致的 React 状态不同步）
+  useEffect(() => {
+    const saved = loadLSText(LS_KEYS.prompt);
+    if (saved && saved !== prompt) setPrompt(saved);
+  }, []);
+
   // ── 页面加载时恢复任务 ──
   // 从 GET /api/tasks 获取最近 20 条任务，优先恢复处理中的，其次展示最近完成的
   useEffect(() => {
@@ -371,7 +377,7 @@ export default function ImageGenerator() {
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1.5">描述词 (Prompt)</label>
           <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)}
-            placeholder="描述你想要生成的图片..." rows={3}
+            placeholder="描述你想要生成的图片..." rows={3} autoComplete="off"
             className="w-full rounded-xl border border-slate-200 bg-white/60 px-4 py-3 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-transparent resize-none transition-all" />
         </div>
 
