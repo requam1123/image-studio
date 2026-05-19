@@ -17,6 +17,7 @@ import { Clock, Trash2, Eye, Download, Image, Wand2, X, ImageIcon, Loader2 } fro
 import Button from "@/components/ui/Button";
 import {
   loadHistory,
+  loadHistoryPage,
   deleteHistoryItem,
   getHistoryItem,
   type HistoryItem,
@@ -32,17 +33,43 @@ interface Props {
 export default function HistoryPanel({ open, onClose }: Props) {
   const [items, setItems] = useState<HistoryItem[]>([]);
   const [previewSrc, setPreviewSrc] = useState<string | null>(null);
-  const [selectMode, setSelectMode] = useState(false);              // 批量删除模式
+  const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [offset, setOffset] = useState(0);
+  const [total, setTotal] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const [loading, setLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // 面板打开时加载历史记录
+  // 面板打开时加载第一页
   useEffect(() => {
-    if (open) loadHistory().then(setItems);
+    if (!open) return;
+    setOffset(0);
+    setItems([]);
+    loadHistoryPage(0, 30).then((page) => {
+      setItems(page.items);
+      setTotal(page.total);
+      setOffset(page.offset + page.limit);
+      setHasMore(page.hasMore);
+    });
   }, [open]);
 
+  async function loadMore() {
+    if (loading || !hasMore) return;
+    setLoading(true);
+    const page = await loadHistoryPage(offset, 30);
+    setItems((prev) => [...prev, ...page.items]);
+    setOffset(page.offset + page.limit);
+    setHasMore(page.hasMore);
+    setLoading(false);
+  }
+
   async function refresh() {
-    setItems(await loadHistory());
+    const page = await loadHistoryPage(0, 30);
+    setItems(page.items);
+    setTotal(page.total);
+    setOffset(page.offset + page.limit);
+    setHasMore(page.hasMore);
   }
 
   async function handleDelete(id: string) {
@@ -138,6 +165,18 @@ export default function HistoryPanel({ open, onClose }: Props) {
                   onToggle={() => toggleSelect(item.id)}
                 />
               ))}
+              {/* 查看更多按钮 */}
+              {hasMore && (
+                <div className="flex justify-center pt-2 pb-4">
+                  <button
+                    onClick={loadMore}
+                    disabled={loading}
+                    className="text-xs text-indigo-500 hover:text-indigo-700 font-medium px-6 py-2 rounded-xl border border-indigo-200 hover:border-indigo-400 bg-white/60 hover:bg-white transition-all disabled:opacity-40"
+                  >
+                    {loading ? "加载中..." : "查看更多"}
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>

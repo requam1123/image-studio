@@ -13,12 +13,13 @@
  * - 删除记录时同步删除磁盘文件
  *
  * 接口：
- *   GET  /api/history         — 列表（最近 50 条）
- *   GET  /api/history?id=xxx  — 单个详情（含 b64）
- *   POST /api/history         — 创建（后台调用）
- *   PATCH /api/history        — 更新状态/duration
- *   DELETE /api/history?id=xxx— 删除单条
- *   DELETE /api/history       — 清空当前用户所有记录
+ *   GET  /api/history            — 列表（最近 50 条）
+ *   GET  /api/history?id=xxx     — 单个详情（含 b64）
+ *   GET  /api/history?offset=0&limit=30 — 分页列表
+ *   POST /api/history            — 创建（后台调用）
+ *   PATCH /api/history           — 更新状态/duration
+ *   DELETE /api/history?id=xxx   — 删除单条
+ *   DELETE /api/history          — 清空当前用户所有记录
  *
  * 注：writeB64File 和 sharpen B64File 使用 async（sharp 是异步 API），
  * 与 tasks 路由的同步 SQLite 操作不同，注意不要混淆。
@@ -147,14 +148,32 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ item: itemFromRow(row, true) });
     }
 
+    // 分页参数
+    const offset = Math.max(0, parseInt(searchParams.get("offset") || "0", 10));
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "30", 10)));
+
+    // 总数
+    const countRow = queryOne(
+      "SELECT COUNT(*) as total FROM history WHERE username = ? OR username = ''",
+      [username]
+    );
+    const total = (countRow?.total as number) || 0;
+
+    // 分页数据
     const rows = queryAll(
       `SELECT id, type, model, prompt, size, quality, timestamp, duration, status,
               usage_total, usage_input, usage_output,
               file_path, images_file_path, json_array_length(ref_images) as refCount
-       FROM history WHERE username = ? OR username = '' ORDER BY timestamp DESC LIMIT ?`,
-      [username, MAX_ITEMS]
+       FROM history WHERE username = ? OR username = '' ORDER BY timestamp DESC LIMIT ? OFFSET ?`,
+      [username, limit, offset]
     );
-    return NextResponse.json({ items: rows.map((r) => itemFromRow(r)) });
+    return NextResponse.json({
+      items: rows.map((r) => itemFromRow(r)),
+      total,
+      offset,
+      limit,
+      hasMore: offset + limit < total,
+    });
   } catch (e) {
     console.error("GET /api/history:", e);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

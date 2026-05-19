@@ -41,6 +41,14 @@ export interface HistoryItem {
   refCount?: number;        // 参考图数量（仅用于 HistoryPanel 展开指示）
 }
 
+export interface HistoryPage {
+  items: HistoryItem[];
+  total: number;
+  offset: number;
+  limit: number;
+  hasMore: boolean;
+}
+
 const API_BASE = "/api/history";
 
 /** 获取单条历史详情（含 b64、refImages 等完整数据） */
@@ -56,16 +64,31 @@ export async function getHistoryItem(id: string): Promise<HistoryItem | null> {
   }
 }
 
-/** 获取最近 50 条历史记录列表（无 b64，只有 filePath / imagesFilePath） */
-export async function loadHistory(): Promise<HistoryItem[]> {
+/** 分页加载历史记录列表（无 b64，只有 filePath / imagesFilePath）
+ *  不传参数时等价于 loadHistory() 向后兼容 */
+export async function loadHistory(offset?: number, limit?: number): Promise<HistoryItem[]> {
   try {
-    const res = await fetch(API_BASE);
+    let url = API_BASE;
+    if (offset != null) url += `?offset=${offset}&limit=${limit ?? 30}`;
+    const res = await fetch(url);
     if (!res.ok) return [];
     const data = await res.json();
     return data.items ?? [];
   } catch (e) {
     console.warn("loadHistory failed:", e);
     return [];
+  }
+}
+
+/** 分页加载历史记录（含总数和 hasMore 标记） */
+export async function loadHistoryPage(offset: number, limit: number = 30): Promise<HistoryPage> {
+  try {
+    const res = await fetch(`${API_BASE}?offset=${offset}&limit=${limit}`);
+    if (!res.ok) return { items: [], total: 0, offset, limit, hasMore: false };
+    return await res.json();
+  } catch (e) {
+    console.warn("loadHistoryPage failed:", e);
+    return { items: [], total: 0, offset, limit, hasMore: false };
   }
 }
 
