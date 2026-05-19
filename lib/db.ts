@@ -30,6 +30,8 @@ fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 const db = new Database(dbPath);
 db.pragma("journal_mode = WAL");   // WAL 模式：读写不互斥，性能更好
 db.pragma("foreign_keys = ON");    // 外键约束
+db.pragma("wal_autocheckpoint = 1000");  // WAL 每 1000 页自动 checkpoint（~4MB），防止 WAL 无限膨胀
+db.pragma("wal_checkpoint(TRUNCATE)");   // 启动时清理已有 WAL，避免积压到上 GB
 
 // ── 建表 ──
 
