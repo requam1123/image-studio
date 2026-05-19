@@ -359,6 +359,11 @@ async function processGenerateTask(
     // 保存到 history
     if (successResults.length > 0) {
       await saveResultsToHistory(taskId, username, isEdit, model, t, refImages, successResults as Record<string, unknown>[]);
+      // 已保存到 history，清理 tasks 表中的 b64 数据，防止数据库膨胀
+      execute(
+        "UPDATE tasks SET results = NULL, ref_images = NULL WHERE id = ?",
+        [taskId]
+      );
     }
   } catch (err) {
     console.error(`processGenerateTask ${taskId} 失败:`, err);

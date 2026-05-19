@@ -234,9 +234,11 @@ export async function POST(request: NextRequest) {
         item.id, username,
         item.type || "generate", item.model || "gpt-image-2",
         item.prompt || "", item.size || "auto",
-        item.quality ?? null, item.b64 || "",
+        item.quality ?? null,
+        // 写盘成功 → b64 清空（文件路径已存 file_path，前端改走文件加载）
+        filePath ? "" : (item.b64 || ""),
         filePath,
-        item.imagesB64 ? JSON.stringify(item.imagesB64) : null,
+        filePath ? null : (item.imagesB64 ? JSON.stringify(item.imagesB64) : null),
         imagesFilePath ? JSON.stringify(imagesFilePath) : null,
         item.originalB64 ?? null,
         item.refImages ? JSON.stringify(item.refImages) : null,
